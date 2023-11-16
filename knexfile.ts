@@ -32,6 +32,5 @@ if (db_ca) {
   };  
 }
 
-console.log(config);
 
 export default config;
