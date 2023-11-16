@@ -20,6 +20,9 @@
     "deploy:prod": "yarn build && pm2 start ecosystem.config.js --only prod",
     "deploy:dev": "pm2 start ecosystem.config.js --only dev"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "@noir-lang/backend_barretenberg": "^0.17.0",
     "@noir-lang/noir_js": "^0.17.0",
