@@ -90,7 +90,7 @@ export class MerkleTreeWorker {
     for (const [fid_chunk_id, fid_chunk] of fid_chunks.entries()) {
       const chunk_logs = await this.syncLogs(fid_chunk, 0n, end_block);
 
-      logger.debug(`Got ${chunk_logs.length} logs [${fid_chunk_id + 1} / ${fid_chunks.length}]`);
+      logger.info(`Got ${chunk_logs.length} logs [${fid_chunk_id + 1} / ${fid_chunks.length}]`);
 
       unsorted_logs.push(...chunk_logs);
     }

@@ -14,7 +14,7 @@ export class FarcasterController {
   public tree = new MerkleTreeWorker(
     RPC,
     FARCASTER_KEY_REGISTRY_ADDRESS as `0x${string}`,
-    [9698n]
+    [...Array(10_000).keys()].map(e => BigInt(e)),
   );
 
   public initialize() {
