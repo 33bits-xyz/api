@@ -1,6 +1,6 @@
 import { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE } from './src/config';
 
-export default {
+const config = {
   client: 'pg',
   connection: {
     charset: 'utf8',
@@ -21,3 +21,7 @@ export default {
     // stub: 'src/database/stubs',
   },
 };
+
+console.log(config);
+
+export default config;
