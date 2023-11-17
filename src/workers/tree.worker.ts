@@ -77,7 +77,7 @@ export class MerkleTreeWorker {
 
   async initialize() {
     const mimc = await buildMimc();
-    this.tree = new MerkleTreeMiMC(32, mimc);
+    this.tree = new MerkleTreeMiMC(14, mimc);
 
     const end_block = await this.getLatestBlock();
 
