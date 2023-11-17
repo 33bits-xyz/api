@@ -10,6 +10,7 @@ export const ValidateEnv = () => {
     FARCASTER_KEY_REGISTRY_ADDRESS: str(),
     FARCASTER_MNEMONIC: str(),
     FARCASTER_FID: num(),  
+    FARCASTER_WHITELISTED_FIDS: str({ default: '[]' }),
 
     NEYNAR_TOKEN: str(),
     NEYNAR_SIGNER_UUID: str(),

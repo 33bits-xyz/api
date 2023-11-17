@@ -4,7 +4,7 @@ import { MessageService } from "@/services/message.service";
 import { CreateMessageDto } from "@/dtos/messages.dto";
 import { Message } from "@/interfaces/messages.interface";
 import { generate_signature } from "@/utils/farcaster";
-import { FARCASTER_FID, FARCASTER_KEY_REGISTRY_ADDRESS, FARCASTER_MNEMONIC, RPC } from "@/config";
+import { FARCASTER_FID, FARCASTER_KEY_REGISTRY_ADDRESS, FARCASTER_MNEMONIC, FARCASTER_WHITELISTED_FIDS, RPC } from "@/config";
 import { MerkleTreeWorker } from "@/workers/tree.worker";
 
 const fid = parseInt(FARCASTER_FID);
@@ -14,7 +14,10 @@ export class FarcasterController {
   public tree = new MerkleTreeWorker(
     RPC,
     FARCASTER_KEY_REGISTRY_ADDRESS as `0x${string}`,
-    [...Array(10_000).keys()].map(e => BigInt(e)),
+    [
+      ...Array(10_000).keys(),
+      ...JSON.parse(FARCASTER_WHITELISTED_FIDS)
+    ].map(e => BigInt(e)),
   );
 
   public initialize() {
