@@ -1,3 +1,5 @@
+import { TextDecoder } from "util";
+
 export function extractData(
   data: number[][]
 ): {
@@ -18,7 +20,8 @@ export function extractData(
   const messageArrays = data.slice(2);
   // @ts-ignore
   const messageBytes = [].concat(...messageArrays);
-  const message = messageBytes.map(byte => String.fromCharCode(byte)).join('').replace(/\0/g, '');
+  const decoder = new TextDecoder('utf-8');
+  const message = decoder.decode(Uint8Array.from(messageBytes)).replace(/\0/g, '');
 
   return { timestamp, root, text: message };
 }
