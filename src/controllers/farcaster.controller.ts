@@ -59,7 +59,7 @@ export class FarcasterController {
   ): Promise<void> => {
     try {
       const messageData: CreateMessageDto = req.body;
-      const createMessageData: Message = await this.message.createMessage(messageData);
+      const createMessageData: Message = await this.message.createMessage(messageData, this.tree.getState());
 
       res.status(201).json({ ...createMessageData });
     } catch (error) {

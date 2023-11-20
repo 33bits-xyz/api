@@ -4,7 +4,7 @@ export function extractData(
   data: number[][]
 ): {
   timestamp: number,
-  root: string,
+  root: `0x${string}`,
   text: string
 } {
   const timestampBuffer = Buffer.from(data[0]);

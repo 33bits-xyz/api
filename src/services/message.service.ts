@@ -12,6 +12,9 @@ import { Service } from 'typedi';
 import {v4 as uuidv4} from 'uuid';
 
 import circuit from '@/circuit/main.json';
+import { Tree } from '@/interfaces/tree.interface';
+import moment from 'moment';
+import { logger } from '@/utils/logger';
 
 
 @Service()
@@ -26,9 +29,22 @@ export class MessageService {
   }
 
   public async createMessage(
-    messageData: CreateMessageDto
+    messageData: CreateMessageDto,
+    state: Tree
   ): Promise<Message> {
     const inputs = extractData(messageData.publicInputs);
+
+    logger.info(`New cast: ${JSON.stringify(inputs)}`);
+
+    // Validate root
+    if (!state.legacy_roots.includes(inputs.root)) {
+      throw new HttpException(409, `Root is not valid`);
+    }
+
+    // Validate timestamp is not older than 10 minutes
+    if ((inputs.timestamp + 10 * 60) < Math.floor(Date.now() / 1000)) {
+      throw new HttpException(409, `Proof is too old`);
+    }
 
     // Check message does not exists yet
     const findMessage: Message = await MessageModel.query()
@@ -36,8 +52,6 @@ export class MessageService {
       .where('text', '=', inputs.text).first();
 
     if (findMessage) throw new HttpException(409, `This message already exists`);
-
-    // Validate timestamp
 
     // Verify proof
     // @ts-ignore
