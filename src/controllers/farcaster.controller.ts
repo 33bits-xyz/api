@@ -9,19 +9,33 @@ import { MerkleTreeWorker } from "@/workers/tree.worker";
 
 const fid = parseInt(FARCASTER_FID);
 
+const whitelist = JSON.parse(FARCASTER_WHITELISTED_FIDS);
+
 export class FarcasterController {
   public message = Container.get(MessageService);
   public tree = new MerkleTreeWorker(
     RPC,
     FARCASTER_KEY_REGISTRY_ADDRESS as `0x${string}`,
     [
-      ...Array(10_000).keys(),
-      ...JSON.parse(FARCASTER_WHITELISTED_FIDS)
+      ...new Set([
+        ...Array(10_000).keys(),
+        ...whitelist
+      ])
     ].map(e => BigInt(e)),
   );
 
   public initialize() {
     this.tree.initialize();
+  }
+
+  public getWhitelist = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    res.json({
+      whitelist
+    });
   }
 
   public getTree = (
