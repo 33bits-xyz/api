@@ -66,6 +66,24 @@ export class FarcasterController {
     });
   }
 
+  public getCastByWarpcastLink = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const cast_link = Buffer.from(req.params.id, 'base64').toString();
+
+      const cast_id: string = await this.message.getCastByWarpcastLink(cast_link);
+
+      res.status(200).json({
+        cast_id
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public createMessage = async (
     req: Request,
     res: Response,

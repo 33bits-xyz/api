@@ -15,17 +15,51 @@ import circuit from '@/circuit/main.json';
 import { Tree } from '@/interfaces/tree.interface';
 import moment from 'moment';
 import { logger } from '@/utils/logger';
+import axios from 'axios';
 
 
 @Service()
 export class MessageService {
-  private async cast(text: string) {
-    const client = new NeynarAPIClient(NEYNAR_TOKEN);
+  public client = new NeynarAPIClient(NEYNAR_TOKEN);
 
-    return client.v2.publishCast(
+  private async cast(text: string, replyTo: string) {
+    if (replyTo) {
+      return this.client.v2.publishCast(
+        NEYNAR_SIGNER_UUID,
+        text,
+        {
+          replyTo: replyTo,
+        }
+      )
+    }
+
+    return this.client.v2.publishCast(
       NEYNAR_SIGNER_UUID,
-      text
+      text,
     );
+  }
+
+  public async getCastByWarpcastLink(
+    warpcastLink: string
+  ): Promise<string> {
+    const {
+      data: {
+        cast
+      }
+    } = await axios.get(
+      'https://api.neynar.com/v2/farcaster/cast',
+      {
+        params: {
+          type: 'url',
+          identifier: warpcastLink,
+        },
+        headers: {
+          api_key: NEYNAR_TOKEN,
+        },
+      },
+    );
+
+    return cast.hash;
   }
 
   public async createMessage(
@@ -73,7 +107,7 @@ export class MessageService {
     // Cast message
     const {
       hash: farcaster_hash
-    } = await this.cast(inputs.text);
+    } = await this.cast(inputs.text, inputs.replyTo);
 
     const createMessageData: Message = await MessageModel.query()
       .insert({
@@ -85,6 +119,7 @@ export class MessageService {
           proof: messageData.proof,
           publicInputs: messageData.publicInputs
         },
+        reply_to: inputs.replyTo,
         farcaster_hash,
       }).into('messages');
 

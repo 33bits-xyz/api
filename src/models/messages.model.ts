@@ -11,6 +11,7 @@ export class MessageModel extends Model implements Message {
   proof: MessageProof;
 
   farcaster_hash: string | null;
+  reply_to: string | null;
 
   static tableName = 'messages'; // database table name
   static idColumn = 'id'; // id column name
