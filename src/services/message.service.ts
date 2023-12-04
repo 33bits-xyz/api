@@ -1,4 +1,4 @@
-import { NEYNAR_SIGNER_UUID, NEYNAR_TOKEN } from '@/config';
+import { NEYNAR_SIGNER_UUID, NEYNAR_TOKEN, FARCASTER_FID } from '@/config';
 import { CreateMessageDto } from '@/dtos/messages.dto';
 import { HttpException } from '@/exceptions/HttpException';
 import { Message } from '@/interfaces/messages.interface';
@@ -16,6 +16,13 @@ import { Tree } from '@/interfaces/tree.interface';
 import moment from 'moment';
 import { logger } from '@/utils/logger';
 import axios from 'axios';
+
+interface Cast {
+  hash: string;
+  author: {
+    fid: number;
+  }
+}
 
 
 @Service()
@@ -39,9 +46,10 @@ export class MessageService {
     );
   }
 
-  public async getCastByWarpcastLink(
-    warpcastLink: string
-  ): Promise<string> {
+  public async getCast(
+    type: 'url' | 'hash',
+    identifier: string
+  ): Promise<Cast> {
     const {
       data: {
         cast
@@ -50,8 +58,8 @@ export class MessageService {
       'https://api.neynar.com/v2/farcaster/cast',
       {
         params: {
-          type: 'url',
-          identifier: warpcastLink,
+          type,
+          identifier,
         },
         headers: {
           api_key: NEYNAR_TOKEN,
@@ -59,7 +67,7 @@ export class MessageService {
       },
     );
 
-    return cast.hash;
+    return cast; 
   }
 
   public async createMessage(
@@ -69,6 +77,13 @@ export class MessageService {
     const inputs = extractData(messageData.publicInputs);
 
     logger.info(`New cast: ${JSON.stringify(inputs)}`);
+
+    // Check reply cast is part of the feed (cant reply to external accounts)
+    if (inputs.replyTo !== null) {
+      const cast = await this.getCast('hash', inputs.replyTo);
+
+      if (cast.author.fid.toString() !== FARCASTER_FID) throw new HttpException(409, `Cannot reply to external accounts`);
+    }
 
     // Validate root
     if (!state.legacy_roots.includes(inputs.root)) {

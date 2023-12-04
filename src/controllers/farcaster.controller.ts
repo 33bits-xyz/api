@@ -74,10 +74,10 @@ export class FarcasterController {
     try {
       const cast_link = Buffer.from(req.params.id, 'base64').toString();
 
-      const cast_id: string = await this.message.getCastByWarpcastLink(cast_link);
+      const cast = await this.message.getCast('url', cast_link);
 
       res.status(200).json({
-        cast_id
+        cast_id: cast.hash
       });
     } catch (error) {
       next(error);
