@@ -82,7 +82,12 @@ export class MessageService {
     if (inputs.replyTo !== null) {
       const cast = await this.getCast('hash', inputs.replyTo);
 
-      if (cast.author.fid.toString() !== FARCASTER_FID) throw new HttpException(409, `Cannot reply to external accounts`);
+      if (cast.author.fid.toString() !== FARCASTER_FID) {
+        throw new HttpException(
+          409,
+          `Please, note that you can only reply to casts from 33bits account for now`
+        );
+      }
     }
 
     // Validate root
