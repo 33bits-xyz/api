@@ -5,7 +5,6 @@ import { Message } from '@/interfaces/messages.interface';
 import { MessageModel } from '@/models/messages.model';
 import { MESSAGE_VERSION } from '@/utils/constants';
 import { extractData } from '@/utils/noir';
-import { NeynarAPIClient } from '@standard-crypto/farcaster-js';
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
 import { Service } from 'typedi';
@@ -27,23 +26,34 @@ interface Cast {
 
 @Service()
 export class MessageService {
-  public client = new NeynarAPIClient(NEYNAR_TOKEN);
-
-  private async cast(text: string, replyTo: string) {
-    if (replyTo) {
-      return this.client.v2.publishCast(
-        NEYNAR_SIGNER_UUID,
-        text,
-        {
-          replyTo: replyTo,
-        }
-      )
-    }
-
-    return this.client.v2.publishCast(
-      NEYNAR_SIGNER_UUID,
+  private async cast(
+    text: string,
+    replyTo: string,
+    channel?: string
+  ) {
+    const params = {
       text,
+      signer_uuid: NEYNAR_SIGNER_UUID,
+      ...(!replyTo ? {} : { parent: replyTo }),
+      ...(!channel ? {} : { channel_id: channel }),
+    };
+
+    console.log('casting');
+    console.log(params);
+
+    const {
+      data
+    } = await axios.post(
+      'https://api.neynar.com/v2/farcaster/cast',
+      params,
+      {
+        headers: {
+          api_key: NEYNAR_TOKEN,   
+        },
+      },
     );
+
+    return data.cast.hash;
   }
 
   public async getCast(
@@ -81,13 +91,6 @@ export class MessageService {
     // Check reply cast is part of the feed (cant reply to external accounts)
     if (inputs.replyTo !== null) {
       const cast = await this.getCast('hash', inputs.replyTo);
-
-      // if (cast.author.fid.toString() !== FARCASTER_FID) {
-      //   throw new HttpException(
-      //     409,
-      //     `Please, note that you can only reply to casts from 33bits account for now`
-      //   );
-      // }
     }
 
     // Validate root
@@ -120,14 +123,17 @@ export class MessageService {
     );
 
     // @ts-ignore
-    const verification = await noir.verifyFinalProof(messageData);
+    const verification = await noir.verifyFinalProof({
+      // @ts-ignore
+      publicInputs: messageData.publicInputs,
+      // @ts-ignore
+      proof: messageData.proof,
+    });
 
     if (!verification) throw new HttpException(409, `Proof is not valid`);
 
     // Cast message
-    const {
-      hash: farcaster_hash
-    } = await this.cast(inputs.text, inputs.replyTo);
+    const farcaster_hash = await this.cast(inputs.text, inputs.replyTo, messageData.channel);
 
     const createMessageData: Message = await MessageModel.query()
       .insert({

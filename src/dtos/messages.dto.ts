@@ -6,4 +6,6 @@ export class CreateMessageDto {
 
   @IsNotEmpty()
   public publicInputs: number[][];
+
+  public channel: string;
 }

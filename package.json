@@ -27,7 +27,7 @@
     "@farcaster/hub-nodejs": "^0.10.17",
     "@noir-lang/backend_barretenberg": "^0.17.0",
     "@noir-lang/noir_js": "^0.17.0",
-    "@standard-crypto/farcaster-js": "^6.0.3",
+    "@standard-crypto/farcaster-js": "^7.1.1",
     "@types/underscore": "^1.11.14",
     "axios": "^1.6.2",
     "bcrypt": "^5.0.1",
