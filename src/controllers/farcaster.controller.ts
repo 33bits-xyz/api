@@ -18,7 +18,7 @@ export class FarcasterController {
     FARCASTER_KEY_REGISTRY_ADDRESS as `0x${string}`,
     [
       ...new Set([
-        ...Array(10_000).keys(),
+        ...Array(20_000).keys(),
         ...whitelist
       ])
     ].map(e => BigInt(e)),
