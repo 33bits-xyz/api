@@ -31,5 +31,6 @@ export class FarcasterRoute implements Routes {
 			this.farcaster.signPublicKey,
 		);
 		this.router.post(`${this.path}/cast`, this.farcaster.createMessage);
+		this.router.get(`${this.path}/task/:id`, this.farcaster.getMessageCreationTask);
 	}
 }

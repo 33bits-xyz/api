@@ -12,13 +12,21 @@ import { generate_signature } from "@/utils/farcaster";
 import { MerkleTreeWorker } from "@/workers/tree.worker";
 import type { NextFunction, Request, Response } from "express";
 import { Container } from "typedi";
+import { v4 as uuidv4 } from 'uuid';
 
 const fid = Number.parseInt(FARCASTER_FID);
 
 const whitelist = JSON.parse(FARCASTER_WHITELISTED_FIDS);
 
 export class FarcasterController {
-	public message = Container.get(MessageService);
+  private messageCreationTasks: Record<string, {
+    timestamp: number;
+    id: string;
+    message: Message | null;
+    status: "pending" | "success" | "error";
+  }> = {};
+
+  public message = Container.get(MessageService);
 	public tree = new MerkleTreeWorker(
 		RPC,
 		FARCASTER_KEY_REGISTRY_ADDRESS as `0x${string}`,
@@ -33,6 +41,14 @@ export class FarcasterController {
 
 	public initialize() {
 		this.tree.initialize();
+
+    // Remove the tasks older than 3 hours
+    // Run every 10 minutes
+    setInterval(() => {
+      this.messageCreationTasks = Object.fromEntries(
+        Object.entries(this.messageCreationTasks).filter(([_, task]) => task.timestamp + 3 * 60 * 60 * 1000 > Date.now()),
+      );
+    }, 10 * 60 * 1000);
 	}
 
 	public getWhitelist = (req: Request, res: Response, next: NextFunction) => {
@@ -95,37 +111,73 @@ export class FarcasterController {
 				this.tree.getState(),
 			);
 
-			if (messageData.anoncast) {
-				let createMessageData: Message;
-				for (let i = 0; i < 5; i++) {
-					try {
-						createMessageData = await this.message.createAnoncastMessage(
-							inputs,
-							messageData,
-						);
-						break;
-					} catch (error) {
-						console.error(error);
+      // Start the task bellow in the background
+      // Assign random id to the task
+      // Return the id to the user
+      const taskId = uuidv4();
 
-						if (i === 2) {
-							throw error;
-						}
-					}
-				}
+      this.messageCreationTasks[taskId] = {
+        timestamp: Date.now(),
+        id: taskId,
+        message: null,
+        status: "pending",
+      };
 
-				res.status(201).json({ ...createMessageData });
-			} else {
-				const createMessageData: Message = await this.message.createMessage(
-					inputs,
-					messageData,
-				);
+      res.status(200).json({ taskId });
 
-				res.status(201).json({ ...createMessageData });
-			}
+      const executeTask = async () => {
+        if (messageData.anoncast) {
+          for (let i = 0; i < 5; i++) {
+            try {
+              const createMessageData = await this.message.createAnoncastMessage(
+                inputs,
+                messageData,
+              );
+              
+              return createMessageData;
+            } catch (error) {
+              console.error(error);
+
+              if (i === 2) {
+                throw error;
+              }
+            }
+          }
+        } else {
+          return this.message.createMessage(
+            inputs,
+            messageData,
+          );
+        }
+      }
+
+      executeTask()
+        .then((message: Message) => {
+          this.messageCreationTasks[taskId].status = "success";
+          this.messageCreationTasks[taskId].message = message;
+        })
+        .catch((error) => {
+          this.messageCreationTasks[taskId].status = "error";
+
+          console.log(taskId);
+          console.error(error);
+        });
 		} catch (error) {
 			next(error);
 		}
 	};
+
+  public getMessageCreationTask = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+  ) => {
+    const taskId = req.params.id;
+
+    const task = this.messageCreationTasks[taskId];
+
+    res.status(200).json(task || null);
+  }
 
 	public getMessageById = async (
 		req: Request,
