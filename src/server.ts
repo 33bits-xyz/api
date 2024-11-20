@@ -1,11 +1,9 @@
-import { App } from '@/app';
-import { ValidateEnv } from '@utils/validateEnv';
-import { FarcasterRoute } from './routes/farcaster.route';
+import { App } from "@/app";
+import { ValidateEnv } from "@utils/validateEnv";
+import { FarcasterRoute } from "./routes/farcaster.route";
 
 ValidateEnv();
 
-const app = new App([
-  new FarcasterRoute(),
-]);
+const app = new App([new FarcasterRoute()]);
 
 app.listen();
