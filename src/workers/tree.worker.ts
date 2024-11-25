@@ -10,25 +10,10 @@ import { MerkleTreeMiMC, MiMC7 } from "@/utils/merkle-tree";
 
 import _ from "underscore";
 
-type LogEntry = {
-	blockNumber: bigint;
-	logIndex: number;
-	transactionIndex: number;
-};
+type LogEntry = GetLogsReturnType<GetAbiItemReturnType<[typeof event], "Add">>;
 
 const event = parseAbiItem(KEY_REGISTRY_ADD_EVENT_SIGNATURE);
 
-function sortLogEntries(logEntries: LogEntry[]) {
-	return logEntries.sort((a, b) => {
-		if (a.blockNumber !== b.blockNumber) {
-			return a.blockNumber < b.blockNumber ? -1 : 1;
-		}
-		if (a.transactionIndex !== b.transactionIndex) {
-			return a.transactionIndex - b.transactionIndex;
-		}
-		return a.logIndex - b.logIndex;
-	});
-}
 
 export class MerkleTreeWorker {
 	private client;
@@ -75,19 +60,28 @@ export class MerkleTreeWorker {
 	async initialize() {
 		const mimc = await buildMimc();
 		this.tree = new MerkleTreeMiMC(16, mimc);
+		this.last_block = 127489961n;
 
+		await this.update();
+
+		setInterval(async () => {
+			await this.update();
+		}, 30_000);
+	}
+
+	private async update() {
 		const end_block = await this.getLatestBlock();
 
-		logger.info(`Syncing bootstrap logs until block #${end_block}`);
+		logger.info(`Syncing logs until block #${end_block}`);
 
 		const fid_chunks = _.chunk(this.fids, 1_000);
 
-		const unsorted_logs = [];
+		const logs = [];
 
 		for (const [fid_chunk_id, fid_chunk] of fid_chunks.entries()) {
 			const chunk_logs = await this.getLogs(
 				fid_chunk,
-				127489961n,
+				this.last_block,
 				end_block,
 			);
 
@@ -95,10 +89,10 @@ export class MerkleTreeWorker {
 				`Got ${chunk_logs.length} logs [${fid_chunk_id + 1} / ${fid_chunks.length}]`,
 			);
 
-			unsorted_logs.push(...chunk_logs);
-		}
+			console.log(chunk_logs);
 
-		const logs = sortLogEntries(unsorted_logs);
+			logs.push(...chunk_logs);
+		}
 
 		logger.info(`Got ${logs.length} bootrstap logs`);
 
@@ -123,8 +117,6 @@ export class MerkleTreeWorker {
 		this.updateState();
 
 		this.last_block = end_block;
-
-		this.subscribeToLogs();
 	}
 
 	private updateState() {
@@ -151,61 +143,23 @@ export class MerkleTreeWorker {
 		};
 	}
 
-	private subscribeToLogs() {
-		setTimeout(async () => {
-			const end_block = await this.getLatestBlock();
-
-			const logs = await this.getLogs(
-				this.fids,
-				this.last_block + 1n,
-				end_block,
-			);
-
-			if (logs.length > 0) {
-				logger.info(`Got ${logs.length} logs`);
-
-				for (const {
-					args: { fid, keyBytes: key },
-					...log
-				} of logs) {
-					this.addElement({
-						fid: Number.parseInt(fid.toString()),
-						key,
-					});
-				}
-
-				this.updateState();
-			}
-
-			this.last_block = end_block;
-
-			this.subscribeToLogs();
-		}, 5000);
-	}
-
 	private async getLogs(
 		fids: bigint[] = this.fids,
 		start_block: bigint,
 		end_block: bigint,
-	): Promise<
-		GetLogsReturnType<GetAbiItemReturnType<[typeof event], "Add">>[]
-	> {
+	): Promise<LogEntry[]> {
 		const intervals = createIntervals(
 			start_block,
 			end_block,
 			this.getlogs_batch_size,
 		);
 
-		const logs: GetLogsReturnType<
-			GetAbiItemReturnType<[typeof event], "Add">
-		>[] = [];
-
-		for (const [i, [start, end]] of intervals.entries()) {
+		const logs = await Promise.all(intervals.map(async ([start, end], i) => {
 			logger.info(
 				`Syncing logs from ${start} to ${end} (${i + 1}/${intervals.length})`,
 			);
 
-			const logs_interval = await this.client.getLogs({
+			return this.client.getLogs({
 				address: this.key_registry_address,
 				args: {
 					fid: fids,
@@ -215,11 +169,9 @@ export class MerkleTreeWorker {
 				toBlock: end,
 				strict: true,
 			});
+		}));
 
-			logs.push(...logs_interval);
-		}
-
-		return logs;
+		return logs.flat();
 	}
 
 	private addElement(element: TreeElement) {
