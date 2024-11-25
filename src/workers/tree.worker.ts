@@ -47,7 +47,7 @@ export class MerkleTreeWorker {
 		rpc: string,
 		key_registry_address: `0x${string}`,
 		fids: bigint[],
-		getlogs_batch_size = 500_000n,
+		getlogs_batch_size = 100_000n,
 	) {
 		this.client = createPublicClient({
 			chain: optimism,
@@ -80,14 +80,14 @@ export class MerkleTreeWorker {
 
 		logger.info(`Syncing bootstrap logs until block #${end_block}`);
 
-		const fid_chunks = _.chunk(this.fids, 2000);
+		const fid_chunks = _.chunk(this.fids, 1_000);
 
 		const unsorted_logs = [];
 
 		for (const [fid_chunk_id, fid_chunk] of fid_chunks.entries()) {
 			const chunk_logs = await this.getLogs(
 				fid_chunk,
-				111816359n,
+				127489961n,
 				end_block,
 			);
 
