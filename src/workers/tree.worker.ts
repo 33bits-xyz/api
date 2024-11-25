@@ -78,7 +78,7 @@ export class MerkleTreeWorker {
 
 		logger.info(`Syncing bootstrap logs until block #${end_block}`);
 
-		const fid_chunks = _.chunk(this.fids, 1000);
+		const fid_chunks = _.chunk(this.fids, 100);
 
 		const unsorted_logs = [];
 
